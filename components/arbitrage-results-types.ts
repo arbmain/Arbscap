@@ -5,7 +5,7 @@ export interface PathOpportunity {
   pairs: string[];            // Corresponding trading pairs for the path
   end_amount: number;         // The resulting amount after completing the path
   profit_percent: number;     // Profit percentage of this arbitrage opportunity
-  risk: 'SAFE' | 'RISKY';    // Risk level
+  risk: 'SAFE' | 'MEDIUM';   // <-- Updated to match backend
 }
 
 export interface ArbitrageCalculateResponse {

@@ -116,3 +116,6 @@ export function ArbitrageResults({ results, loading, error, startAmount }: Arbit
     </div>
   );
 }
+
+// ✅ Export types so they can be imported elsewhere
+export type { ArbitrageCalculateResponse, PathOpportunity };

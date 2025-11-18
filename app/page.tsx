@@ -2,27 +2,74 @@
 
 import { useState } from 'react';
 import { ArbitrageForm } from '@/components/arbitrage-form';
-import { ArbitrageResults } from '@/components/arbitrage-results';
+import { ArbitrageResults, ArbitrageCalculateResponse, PathOpportunity } from '@/components/arbitrage-results';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
-import { api, ArbitrageCalculateRequest, ArbitrageCalculateResponse } from '@/lib/api';
+
+interface ArbitrageCalculateRequest {
+  start_coin: string;
+  start_amount: number;
+  mode: string;
+}
 
 export default function Home() {
   const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [startAmount, setStartAmount] = useState<number>(0); // Track dynamic start amount
+  const [startAmount, setStartAmount] = useState<number>(0);
 
   const handleCalculate = async (formData: ArbitrageCalculateRequest) => {
     setLoading(true);
     setError(null);
-    setStartAmount(formData.start_amount); // update start amount dynamically
+    setResults({
+      start_coin: formData.start_coin,
+      start_amount: formData.start_amount,
+      mode: formData.mode,
+      opportunities: [],
+      total_count: 0,
+      fetch_timestamp: new Date().toISOString(),
+    });
+    setStartAmount(formData.start_amount);
 
     try {
-      const data = await api.calculateArbitrage(formData);
-      setResults(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to calculate opportunities');
+      const response = await fetch('/arbitrage/calculate/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.body) throw new Error('No response body from server');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Extract JSON objects from the streamed response
+        const regex = /\{[^{}]*"path":[^}]*\}/g;
+        let match;
+        while ((match = regex.exec(buffer)) !== null) {
+          try {
+            const opp: PathOpportunity = JSON.parse(match[0]);
+            setResults((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                opportunities: [...prev.opportunities, opp],
+                total_count: prev.opportunities.length + 1,
+              };
+            });
+          } catch {
+            // ignore incomplete JSON chunks
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to calculate arbitrage opportunities.');
       console.error('Arbitrage calculation error:', err);
     } finally {
       setLoading(false);
@@ -74,7 +121,7 @@ export default function Home() {
                 results={results}
                 loading={loading}
                 error={error}
-                startAmount={startAmount} // ✅ pass the required prop
+                startAmount={startAmount}
               />
             </CardContent>
           </Card>
@@ -82,4 +129,4 @@ export default function Home() {
       </div>
     </main>
   );
-        }
+}

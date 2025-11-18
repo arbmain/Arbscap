@@ -1,8 +1,12 @@
 # Netlify configuration for Next.js 16 with custom webpack
 
 [build]
-  command = "npm run build --webpack"  # Build command
-  publish = ".next"                     # Output directory for Next.js
+  command = "npm run build"
+  publish = ".next"
+  functions = "netlify/functions"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [dev]
   framework = "next"

@@ -70,12 +70,17 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
             {results.opportunities.map((opp, idx) => (
               <TableRow key={idx} className="hover:bg-muted/50">
                 <TableCell className="font-mono text-sm">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-col gap-1">
                     {opp.path.map((coin, i) => (
-                      <span key={i}>
+                      <div key={i} className="flex items-center gap-1 flex-wrap">
                         {i > 0 && <ArrowRight className="inline w-3 h-3 mx-1" />}
                         <span className="font-semibold">{coin}</span>
-                      </span>
+                        {opp.pairs[i] && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({opp.pairs[i]})
+                          </span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </TableCell>
@@ -91,9 +96,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
                       opp.profit_percent > 0 ? 'text-green-600' : 'text-red-600'
                     }`}
                   >
-                    {opp.profit_percent > 0 && (
-                      <TrendingUp className="w-4 h-4" />
-                    )}
+                    {opp.profit_percent > 0 && <TrendingUp className="w-4 h-4" />}
                     {opp.profit_percent.toFixed(4)}%
                   </div>
                 </TableCell>

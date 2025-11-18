@@ -1,7 +1,9 @@
-{
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm ci",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
-}
+# Netlify configuration for Next.js 16 with custom webpack
+
+[build]
+  command = "npm run build --webpack"  # Build command
+  publish = ".next"                     # Output directory for Next.js
+
+[dev]
+  framework = "next"
+  port = 8888

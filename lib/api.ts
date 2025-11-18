@@ -4,7 +4,8 @@
  */
 
 // Backend URL - Change this for different environments
-export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://scrapper-h4xe.onrender.com';
+export const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || 'https://scrapper-h4xe.onrender.com';
 
 // API Types
 export interface ArbitrageCalculateRequest {
@@ -15,6 +16,7 @@ export interface ArbitrageCalculateRequest {
 
 export interface ArbitrageOpportunity {
   path: string[];
+  pairs: string[];          // <-- Added to match backend
   start_amount: number;
   end_amount: number;
   profit_percent: number;
@@ -66,7 +68,7 @@ export const api = {
   },
 
   /**
-   * Refresh data from Bybit API
+   * Refresh data from backend
    */
   refreshData: async (): Promise<{ message: string; timestamp: string }> => {
     const response = await fetch(`${BACKEND_URL}/arbitrage/refresh`, {

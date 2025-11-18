@@ -1,30 +1,41 @@
 export async function GET(request: Request) {
-  console.log('Fetch Bybit function called');
+  console.log('--- Fetch Bybit function called ---');
+
+  const BYBIT_API_URL = 'https://api.bybit.com/v5/market/tickers?category=spot&limit=1000';
 
   try {
-    const response = await fetch(
-      'https://api.bybit.com/v5/market/tickers?category=spot&limit=1000'
-    );
+    console.log('Requesting Bybit API URL:', BYBIT_API_URL);
 
-    console.log('Bybit API URL:', response.url);
-    console.log('Status code:', response.status);
+    const response = await fetch(BYBIT_API_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; MyArbBot/1.0)',
+      },
+    });
+
+    console.log('Bybit status code:', response.status);
+    console.log('Bybit response headers:', Object.fromEntries(response.headers.entries()));
 
     const text = await response.text();
-    let data;
+    console.log('Bybit raw response (first 2000 chars):', text.slice(0, 2000));
 
+    let data;
     try {
       data = JSON.parse(text);
-      console.log('Response JSON keys:', Object.keys(data));
+      console.log('Successfully parsed JSON. Keys:', Object.keys(data));
     } catch (err) {
-      console.error('Failed to parse JSON:', err);
-      return new Response('Failed to parse Bybit response as JSON', { status: 500 });
+      console.error('JSON parse error:', err);
+      return new Response(
+        'Failed to parse Bybit response as JSON. See logs for details.',
+        { status: 500 }
+      );
     }
 
     if (data.retCode !== 0) {
-      console.error('Bybit API returned error:', data.retMsg);
+      console.error('Bybit API returned error retCode != 0:', data.retMsg);
       return new Response(`Bybit API error: ${data.retMsg}`, { status: 500 });
     }
 
+    console.log('Bybit API returned successfully.');
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

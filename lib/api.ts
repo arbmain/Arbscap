@@ -4,7 +4,7 @@
  */
 
 // Backend URL - Change this for different environments
-export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://scrapper-z0kx.onrender.com';
+export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://scrapper-h4xe.onrender.com';
 
 // API Types
 export interface ArbitrageCalculateRequest {

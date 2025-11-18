@@ -11,10 +11,12 @@ export default function Home() {
   const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startAmount, setStartAmount] = useState<number>(0); // Track dynamic start amount
 
   const handleCalculate = async (formData: ArbitrageCalculateRequest) => {
     setLoading(true);
     setError(null);
+    setStartAmount(formData.start_amount); // update start amount dynamically
 
     try {
       const data = await api.calculateArbitrage(formData);
@@ -72,6 +74,7 @@ export default function Home() {
                 results={results}
                 loading={loading}
                 error={error}
+                startAmount={startAmount} // ✅ pass the required prop
               />
             </CardContent>
           </Card>
@@ -79,4 +82,4 @@ export default function Home() {
       </div>
     </main>
   );
-}
+        }

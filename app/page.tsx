@@ -2,15 +2,10 @@
 
 import { useState } from 'react';
 import { ArbitrageForm } from '@/components/arbitrage-form';
-import { ArbitrageResults, ArbitrageCalculateResponse, PathOpportunity } from '@/components/arbitrage-results';
+import { ArbitrageResults, ArbitrageCalculateResponse } from '@/components/arbitrage-results';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
-
-interface ArbitrageCalculateRequest {
-  start_coin: string;
-  start_amount: number;
-  mode: string;
-}
+import { api, ArbitrageCalculateRequest } from '@/lib/api'; // Make sure path is correct
 
 export default function Home() {
   const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
@@ -32,42 +27,14 @@ export default function Home() {
     setStartAmount(formData.start_amount);
 
     try {
-      const response = await fetch('/arbitrage/calculate/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      // Use centralized API helper
+      const data = await api.calculateArbitrage(formData);
+
+      setResults({
+        ...data,
+        total_count: data.opportunities.length,
+        fetch_timestamp: new Date().toISOString(),
       });
-
-      if (!response.body) throw new Error('No response body from server');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        // Extract JSON objects from the streamed response
-        const regex = /\{[^{}]*"path":[^}]*\}/g;
-        let match;
-        while ((match = regex.exec(buffer)) !== null) {
-          try {
-            const opp: PathOpportunity = JSON.parse(match[0]);
-            setResults((prev: ArbitrageCalculateResponse | null) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                opportunities: [...prev.opportunities, opp],
-                total_count: prev.opportunities.length + 1,
-              };
-            });
-          } catch {
-            // ignore incomplete JSON chunks
-          }
-        }
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to calculate arbitrage opportunities.');
       console.error('Arbitrage calculation error:', err);

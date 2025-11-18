@@ -50,9 +50,15 @@ const useFormField = () => {
     throw new Error("useFormField should be used within <FormField>")
   }
 
+  const { id } = itemContext
+
   return {
-    ...fieldState,
+    id,
     name: fieldContext.name,
+    formItemId: id,
+    formDescriptionId: `${id}-form-item-description`,
+    formMessageId: `${id}-form-item-message`,
+    ...fieldState,
   }
 }
 
@@ -161,5 +167,4 @@ export {
   FormDescription,
   FormMessage,
   FormField,
-     }
-    
+}

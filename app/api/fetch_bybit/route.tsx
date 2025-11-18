@@ -1,5 +1,5 @@
-export async function handler(event, context) {
-  console.log('Fetch Bybit function called'); 
+export async function GET(request: Request) {
+  console.log('Fetch Bybit function called');
 
   try {
     const response = await fetch(
@@ -11,35 +11,27 @@ export async function handler(event, context) {
 
     const text = await response.text();
     let data;
+
     try {
       data = JSON.parse(text);
       console.log('Response JSON keys:', Object.keys(data));
     } catch (err) {
       console.error('Failed to parse JSON:', err);
-      return {
-        statusCode: 500,
-        body: 'Failed to parse Bybit response as JSON',
-      };
+      return new Response('Failed to parse Bybit response as JSON', { status: 500 });
     }
 
     if (data.retCode !== 0) {
       console.error('Bybit API returned error:', data.retMsg);
-      return {
-        statusCode: 500,
-        body: `Bybit API error: ${data.retMsg}`,
-      };
+      return new Response(`Bybit API error: ${data.retMsg}`, { status: 500 });
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-    };
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Unexpected error fetching Bybit:', err);
-    return {
-      statusCode: 500,
-      body: `Unexpected error: ${err.message}`,
-    };
+    return new Response(`Unexpected error: ${err.message}`, { status: 500 });
   }
 }

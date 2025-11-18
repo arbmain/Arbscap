@@ -55,7 +55,7 @@ export default function Home() {
         while ((match = regex.exec(buffer)) !== null) {
           try {
             const opp: PathOpportunity = JSON.parse(match[0]);
-            setResults((prev) => {
+            setResults((prev: ArbitrageCalculateResponse | null) => {
               if (!prev) return prev;
               return {
                 ...prev,

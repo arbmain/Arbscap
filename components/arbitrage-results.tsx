@@ -51,8 +51,8 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
-        Mode: <span className="font-semibold">{results.mode}</span> | Starting Amount:{' '}
-        <span className="font-semibold">{results.start_amount}</span> {results.start_coin}
+        Mode: <span className="font-semibold">{results.mode}</span> | Start Coin:{' '}
+        <span className="font-semibold">{results.start_coin}</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -60,7 +60,6 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
           <TableHeader>
             <TableRow>
               <TableHead>Path</TableHead>
-              <TableHead className="text-right">Start Amount</TableHead>
               <TableHead className="text-right">End Amount</TableHead>
               <TableHead className="text-right">Profit %</TableHead>
               <TableHead>Risk</TableHead>
@@ -84,12 +83,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono">
-                  {opp.start_amount.toFixed(2)}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {opp.end_amount.toFixed(2)}
-                </TableCell>
+                <TableCell className="text-right font-mono">{opp.end_amount.toFixed(6)}</TableCell>
                 <TableCell className="text-right">
                   <div
                     className={`font-semibold flex items-center justify-end gap-1 ${

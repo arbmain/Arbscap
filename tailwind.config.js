@@ -1,9 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./app/**/*.{html,js,ts,jsx,tsx}", // <- point to your actual app folder
+    "./app/**/*.{js,ts,jsx,tsx}",  // <-- include your app directory
+    "./components/**/*.{js,ts,jsx,tsx}", // if you have a components folder
   ],
-  darkMode: 'class', // use 'class' for toggling dark mode
+  darkMode: 'class', // toggle dark mode with 'dark' class
   theme: {
     extend: {
       fontFamily: {
@@ -36,5 +37,7 @@ module.exports = {
       },
     },
   },
-  plugins: [],
-}
+  plugins: [
+    require('tailwindcss-animate'),
+  ],
+};

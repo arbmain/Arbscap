@@ -17,9 +17,10 @@ interface ArbitrageResultsProps {
   results: ArbitrageCalculateResponse | null;
   loading: boolean;
   error: string | null;
+  startAmount: number; // dynamic start amount
 }
 
-export function ArbitrageResults({ results, loading, error }: ArbitrageResultsProps) {
+export function ArbitrageResults({ results, loading, error, startAmount }: ArbitrageResultsProps) {
   if (error) {
     return (
       <Alert variant="destructive">
@@ -52,7 +53,8 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
         Mode: <span className="font-semibold">{results.mode}</span> | Start Coin:{' '}
-        <span className="font-semibold">{results.start_coin}</span>
+        <span className="font-semibold">{results.start_coin}</span> | Start Amount:{' '}
+        <span className="font-semibold">{startAmount}</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -60,6 +62,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
           <TableHeader>
             <TableRow>
               <TableHead>Path</TableHead>
+              <TableHead className="text-right">Start Amount</TableHead>
               <TableHead className="text-right">End Amount</TableHead>
               <TableHead className="text-right">Profit %</TableHead>
               <TableHead>Risk</TableHead>
@@ -83,6 +86,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
                     ))}
                   </div>
                 </TableCell>
+                <TableCell className="text-right font-mono">{startAmount.toFixed(6)}</TableCell>
                 <TableCell className="text-right font-mono">{opp.end_amount.toFixed(6)}</TableCell>
                 <TableCell className="text-right">
                   <div

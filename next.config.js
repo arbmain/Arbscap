@@ -1,12 +1,7 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove experimental.turbo entirely
-  webpack(config) {
-    config.resolve.alias['@'] = path.resolve(__dirname);
-    return config;
-  },
+  reactStrictMode: true,
+  swcMinify: true,
 };
 
 module.exports = nextConfig;

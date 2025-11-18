@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -11,16 +12,111 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowRight, AlertCircle, TrendingUp } from 'lucide-react';
-import { ArbitrageCalculateResponse } from '@/lib/api';
 
-interface ArbitrageResultsProps {
-  results: ArbitrageCalculateResponse | null;
-  loading: boolean;
-  error: string | null;
-  startAmount: number; // dynamic start amount
+export interface PathOpportunity {
+  path: string[];
+  pairs: string[];
+  start_amount: number;
+  end_amount: number;
+  profit_percent: number;
+  end_coin: string;
+  risk: 'SAFE' | 'MEDIUM';
 }
 
-export function ArbitrageResults({ results, loading, error, startAmount }: ArbitrageResultsProps) {
+export interface ArbitrageCalculateResponse {
+  start_coin: string;
+  start_amount: number;
+  mode: string;
+  opportunities: PathOpportunity[];
+  total_count: number;
+  fetch_timestamp: string;
+}
+
+interface ArbitrageResultsProps {
+  startCoin: string;
+  startAmount: number;
+  mode: string;
+}
+
+export function ArbitrageResults({ startCoin, startAmount, mode }: ArbitrageResultsProps) {
+  const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchArbitrageStream() {
+      setLoading(true);
+      setError(null);
+      setResults({
+        start_coin: startCoin,
+        start_amount: startAmount,
+        mode,
+        opportunities: [],
+        total_count: 0,
+        fetch_timestamp: new Date().toISOString(),
+      });
+
+      try {
+        const response = await fetch('/arbitrage/calculate/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            start_coin: startCoin,
+            start_amount: startAmount,
+            mode,
+          }),
+        });
+
+        if (!response.body) throw new Error('No response body');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // Extract JSON objects from the stream (simplified)
+          let match;
+          const regex = /\{[^{}]*"path":[^}]*\}/g;
+          while ((match = regex.exec(buffer)) !== null) {
+            try {
+              const opp: PathOpportunity = JSON.parse(match[0]);
+              if (!isMounted) return;
+
+              setResults((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  opportunities: [...prev.opportunities, opp],
+                  total_count: prev.opportunities.length + 1,
+                };
+              });
+            } catch {
+              // ignore incomplete JSON
+            }
+          }
+        }
+      } catch (err: any) {
+        if (!isMounted) return;
+        setError(err.message || 'Failed to fetch arbitrage opportunities.');
+      } finally {
+        if (!isMounted) return;
+        setLoading(false);
+      }
+    }
+
+    fetchArbitrageStream();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [startCoin, startAmount, mode]);
+
   if (error) {
     return (
       <Alert variant="destructive">
@@ -30,7 +126,7 @@ export function ArbitrageResults({ results, loading, error, startAmount }: Arbit
     );
   }
 
-  if (loading) {
+  if (loading && (!results || results.opportunities.length === 0)) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

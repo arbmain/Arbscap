@@ -1,81 +1,84 @@
 'use client';
 
-import { useState } from 'react';
-import { ArbitrageForm } from '@/components/arbitrage-form';
+import { useState, useEffect } from 'react';
 import { ArbitrageResults } from '@/components/arbitrage-results';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp } from 'lucide-react';
-import { api, ArbitrageCalculateRequest, ArbitrageCalculateResponse } from '@/lib/api';
+import { TrendingUp, RefreshCw } from 'lucide-react';
+import { api, ArbitrageScanResponse } from '@/lib/api';
 
 export default function Home() {
-  const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
+  const [results, setResults] = useState<ArbitrageScanResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
-  const handleCalculate = async (formData: ArbitrageCalculateRequest) => {
+  const fetchArbitrage = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await api.calculateArbitrage(formData);
+      const data = await api.scanAllArbitrage(1000);
       setResults(data);
+      setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to calculate opportunities');
-      console.error('Arbitrage calculation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to scan opportunities');
+      console.error('Arbitrage scan error:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  // Auto-refresh every 10 seconds
+  useEffect(() => {
+    fetchArbitrage(); // Initial fetch
+    
+    const interval = setInterval(() => {
+      fetchArbitrage();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-background to-muted p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 mb-4">
             <TrendingUp className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold text-foreground">Crypto Arbitrage Finder</h1>
+            <h1 className="text-4xl font-bold text-foreground">Crypto Arbitrage Scanner</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Discover profitable trading paths on Bybit spot markets
+            Live circular arbitrage opportunities on Binance spot markets
           </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Auto-refreshing every 10 seconds {lastUpdate && `• Last update: ${lastUpdate}`}</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <Card className="lg:col-span-1 h-fit">
-            <CardHeader>
-              <CardTitle>Calculate Opportunities</CardTitle>
-              <CardDescription>Enter your trading parameters</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ArbitrageForm onCalculate={handleCalculate} loading={loading} />
-            </CardContent>
-          </Card>
-
-          {/* Results Section */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Results</CardTitle>
-              <CardDescription>
-                {loading
-                  ? 'Calculating arbitrage opportunities...'
-                  : error
-                    ? 'Error occurred'
-                    : results
-                      ? `Found ${results.opportunities.length} opportunity(ies)`
-                      : 'Submit the form to see results'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ArbitrageResults
-                results={results}
-                loading={loading}
-                error={error}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        {/* Results Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Live Arbitrage Opportunities</CardTitle>
+            <CardDescription>
+              {loading && !results
+                ? 'Scanning for arbitrage opportunities...'
+                : error
+                  ? 'Error occurred'
+                  : results
+                    ? `Found ${results.opportunities.length} circular arbitrage opportunity(ies)`
+                    : 'Loading...'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ArbitrageResults
+              results={results}
+              loading={loading && !results}
+              error={error}
+            />
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

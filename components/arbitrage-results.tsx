@@ -50,7 +50,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
 
   return (
     <div className="space-y-4">
-      
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -63,48 +63,52 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.opportunities.map((opp, idx) => (
-              <TableRow key={idx} className="hover:bg-muted/50">
-                <TableCell className="font-mono text-sm">
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {opp.path.map((coin, i) => (
-                      <span key={i} className="flex items-center gap-1">
-                        {i > 0 && <ArrowRight className="inline w-3 h-3 mx-1" />}
-                        <span className="font-semibold">{coin}</span>
-                      </span>
-                    ))}
-                  </div>
-                  {opp.pairs && opp.pairs.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Pairs: {opp.pairs.join(' → ')}
+            {results.opportunities.map((opp) => {
+              const id = opp.path.join('-'); // <-- FIX 1 (stable key)
+
+              return (
+                <TableRow key={id} className="hover:bg-muted/50">
+                  <TableCell className="font-mono text-sm">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {opp.path.map((coin, i) => (
+                        <span key={i} className="flex items-center gap-1">
+                          {i > 0 && <ArrowRight className="inline w-3 h-3 mx-1" />}
+                          <span className="font-semibold">{coin}</span>
+                        </span>
+                      ))}
                     </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {opp.start_amount.toFixed(2)} {opp.path[0]}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {opp.end_amount.toFixed(2)} {opp.end_coin}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div
-                    className={`font-semibold flex items-center justify-end gap-1 ${
-                      opp.profit_percent > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {opp.profit_percent > 0 && (
-                      <TrendingUp className="w-4 h-4" />
+                    {opp.pairs && opp.pairs.length > 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Pairs: {opp.pairs.join(' → ')}
+                      </div>
                     )}
-                    {opp.profit_percent.toFixed(4)}%
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={opp.risk === 'SAFE' ? 'default' : 'secondary'}>
-                    {opp.risk}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {opp.start_amount.toFixed(2)} {opp.path[0]}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {opp.end_amount.toFixed(2)} {opp.end_coin}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div
+                      className={`font-semibold flex items-center justify-end gap-1 ${
+                        opp.profit_percent > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}
+                    >
+                      {opp.profit_percent > 0 && (
+                        <TrendingUp className="w-4 h-4" />
+                      )}
+                      {opp.profit_percent.toFixed(4)}%
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={opp.risk === 'SAFE' ? 'default' : 'secondary'}>
+                      {opp.risk ?? 'N/A'}  {/* <-- FIX 2 */}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

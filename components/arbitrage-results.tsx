@@ -11,10 +11,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowRight, AlertCircle, TrendingUp } from 'lucide-react';
-import { ArbitrageCalculateResponse } from '@/lib/api';
+import { ArbitrageScanResponse } from '@/lib/api';
 
 interface ArbitrageResultsProps {
-  results: ArbitrageCalculateResponse | null;
+  results: ArbitrageScanResponse | null;
   loading: boolean;
   error: string | null;
 }
@@ -42,7 +42,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          No arbitrage opportunities found. Try adjusting your parameters.
+          No arbitrage opportunities found. The system is scanning all circular paths.
         </AlertDescription>
       </Alert>
     );
@@ -50,16 +50,12 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted-foreground">
-        Mode: <span className="font-semibold">{results.mode}</span> | Starting Amount:{' '}
-        <span className="font-semibold">{results.start_amount}</span> {results.start_coin}
-      </div>
-
+      
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Path</TableHead>
+              <TableHead>Circular Path</TableHead>
               <TableHead className="text-right">Start Amount</TableHead>
               <TableHead className="text-right">End Amount</TableHead>
               <TableHead className="text-right">Profit %</TableHead>
@@ -70,25 +66,25 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
             {results.opportunities.map((opp, idx) => (
               <TableRow key={idx} className="hover:bg-muted/50">
                 <TableCell className="font-mono text-sm">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     {opp.path.map((coin, i) => (
-                      <div key={i} className="flex items-center gap-1">
-                        {i > 0 && <ArrowRight className="inline w-3 h-3" />}
+                      <span key={i} className="flex items-center gap-1">
+                        {i > 0 && <ArrowRight className="inline w-3 h-3 mx-1" />}
                         <span className="font-semibold">{coin}</span>
-                        {opp.pairs && opp.pairs[i] && (
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({opp.pairs[i]})
-                          </span>
-                        )}
-                      </div>
+                      </span>
                     ))}
                   </div>
+                  {opp.pairs && opp.pairs.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Pairs: {opp.pairs.join(' → ')}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {opp.start_amount.toFixed(6)}
+                  {opp.start_amount.toFixed(2)} {opp.path[0]}
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {opp.end_amount.toFixed(6)}
+                  {opp.end_amount.toFixed(2)} {opp.end_coin}
                 </TableCell>
                 <TableCell className="text-right">
                   <div
@@ -114,7 +110,7 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
       </div>
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
-        {results.opportunities.length} opportunity(ies) found - Sorted by highest profit %
+        {results.opportunities.length} opportunity(ies) found - Sorted by highest profit % • Last updated: {new Date(results.fetch_timestamp).toLocaleString()}
       </div>
     </div>
   );

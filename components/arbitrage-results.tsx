@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowRight, AlertCircle, TrendingUp } from 'lucide-react';
-import { ArbitrageScanResponse } from '@/lib/api';
+import { ArbitrageScanResponse, ArbitrageOpportunity } from '@/lib/api';
 
 interface ArbitrageResultsProps {
   results: ArbitrageScanResponse | null;
@@ -50,7 +50,6 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
 
   return (
     <div className="space-y-4">
-
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -63,11 +62,12 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.opportunities.map((opp) => {
-              const id = opp.path.join('-'); // <-- FIX 1 (stable key)
+            {results.opportunities.map((opp, idx) => {
+              // Ensure risk is always "SAFE" or "MEDIUM"
+              const risk: 'SAFE' | 'MEDIUM' = opp.risk === 'SAFE' ? 'SAFE' : 'MEDIUM';
 
               return (
-                <TableRow key={id} className="hover:bg-muted/50">
+                <TableRow key={opp.path.join('-')} className="hover:bg-muted/50">
                   <TableCell className="font-mono text-sm">
                     <div className="flex items-center gap-1 flex-wrap">
                       {opp.path.map((coin, i) => (
@@ -95,15 +95,13 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
                         opp.profit_percent > 0 ? 'text-green-600' : 'text-red-600'
                       }`}
                     >
-                      {opp.profit_percent > 0 && (
-                        <TrendingUp className="w-4 h-4" />
-                      )}
+                      {opp.profit_percent > 0 && <TrendingUp className="w-4 h-4" />}
                       {opp.profit_percent.toFixed(4)}%
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={opp.risk === 'SAFE' ? 'default' : 'secondary'}>
-                      {opp.risk ?? 'N/A'}  {/* <-- FIX 2 */}
+                    <Badge variant={risk === 'SAFE' ? 'default' : 'secondary'}>
+                      {risk}
                     </Badge>
                   </TableCell>
                 </TableRow>
@@ -114,7 +112,8 @@ export function ArbitrageResults({ results, loading, error }: ArbitrageResultsPr
       </div>
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
-        {results.opportunities.length} opportunity(ies) found - Sorted by highest profit % • Last updated: {new Date(results.fetch_timestamp).toLocaleString()}
+        {results.opportunities.length} opportunity(ies) found - Sorted by highest profit % • Last updated:{' '}
+        {results.fetch_timestamp ? new Date(results.fetch_timestamp).toLocaleString() : 'N/A'}
       </div>
     </div>
   );

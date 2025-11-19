@@ -43,7 +43,6 @@ export interface HealthResponse {
   service: string;
 }
 
-// Helper function to parse streamed JSON from backend
 async function parseStreamedJSON(response: Response): Promise<ArbitrageCalculateResponse> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('No response body to read');

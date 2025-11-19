@@ -3,7 +3,6 @@
  * Change BACKEND_URL here to update across the entire app
  */
 
-// Backend URL - Change this for different environments
 export const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || 'https://scrapper-h4xe.onrender.com';
 
@@ -16,7 +15,7 @@ export interface ArbitrageCalculateRequest {
 
 export interface ArbitrageOpportunity {
   path: string[];
-  pairs: string[];          // <-- Added to match backend
+  pairs: string[];
   start_amount: number;
   end_amount: number;
   profit_percent: number;
@@ -29,24 +28,50 @@ export interface ArbitrageCalculateResponse {
   start_amount: number;
   mode: string;
   opportunities: ArbitrageOpportunity[];
+  total_count: number | null;
+  fetch_timestamp: string;
 }
 
 export interface GraphInfoResponse {
-  total_coins: number;
-  total_pairs: number;
-  total_edges: number;
-  last_updated: string;
+  coins_count: number;
+  pairs_count: number;
+  fetch_timestamp: string;
 }
 
 export interface HealthResponse {
   status: string;
-  timestamp: string;
+  service: string;
+}
+
+// Helper function to parse streamed JSON from backend
+async function parseStreamedJSON(response: Response): Promise<ArbitrageCalculateResponse> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body to read');
+
+  const decoder = new TextDecoder('utf-8');
+  let resultStr = '';
+  let done = false;
+
+  while (!done) {
+    const { value, done: streamDone } = await reader.read();
+    done = streamDone;
+    if (value) {
+      resultStr += decoder.decode(value, { stream: !done });
+    }
+  }
+
+  // Backend streams a complete JSON object at the end
+  try {
+    return JSON.parse(resultStr);
+  } catch (err) {
+    throw new Error(`Failed to parse streamed JSON: ${(err as Error).message}`);
+  }
 }
 
 // API Functions
 export const api = {
   /**
-   * Calculate arbitrage opportunities
+   * Calculate arbitrage opportunities (streamed)
    */
   calculateArbitrage: async (
     data: ArbitrageCalculateRequest
@@ -64,13 +89,13 @@ export const api = {
       throw new Error(`Backend error: ${response.statusText} - ${errorText}`);
     }
 
-    return response.json();
+    return parseStreamedJSON(response);
   },
 
   /**
    * Refresh data from backend
    */
-  refreshData: async (): Promise<{ message: string; timestamp: string }> => {
+  refreshData: async (): Promise<{ status: string; fetch_timestamp: string; coins_count: number }> => {
     const response = await fetch(`${BACKEND_URL}/arbitrage/refresh`, {
       method: 'POST',
       headers: {

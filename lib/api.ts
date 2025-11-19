@@ -76,7 +76,7 @@ export const api = {
   calculateArbitrage: async (
     data: ArbitrageCalculateRequest
   ): Promise<ArbitrageCalculateResponse> => {
-    const response = await fetch(`${BACKEND_URL}/arbitrage/calculate/stream`, {
+    const response = await fetch(`${BACKEND_URL}/arbitrage/calculate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

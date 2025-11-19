@@ -43,7 +43,13 @@ export interface HealthResponse {
   service: string;
 }
 
-async function parseStreamedJSON(response: Response): Promise<ArbitrageCalculateResponse> {
+export interface ArbitrageScanResponse {
+  opportunities: ArbitrageOpportunity[];
+  total_count: number;
+  fetch_timestamp: string;
+}
+
+async function parseStreamedJSON(response: Response): Promise<ArbitrageCalculateResponse | ArbitrageScanResponse> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('No response body to read');
 
@@ -88,7 +94,7 @@ export const api = {
       throw new Error(`Backend error: ${response.statusText} - ${errorText}`);
     }
 
-    return parseStreamedJSON(response);
+    return parseStreamedJSON(response) as Promise<ArbitrageCalculateResponse>;
   },
 
   /**
@@ -133,5 +139,24 @@ export const api = {
     }
 
     return response.json();
+  },
+
+  /**
+   * Auto-scan all circular arbitrage opportunities (no form input needed)
+   */
+  scanAllArbitrage: async (startAmount: number = 1000): Promise<ArbitrageScanResponse> => {
+    const response = await fetch(`${BACKEND_URL}/arbitrage/scan/stream?start_amount=${startAmount}&limit=50`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Backend error: ${response.statusText} - ${errorText}`);
+    }
+
+    return parseStreamedJSON(response) as Promise<ArbitrageScanResponse>;
   },
 };

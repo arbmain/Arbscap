@@ -1,10 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArbitrageResults } from '@/components/arbitrage-results';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, RefreshCw } from 'lucide-react';
-import { api, ArbitrageScanResponse } from '@/lib/api';
+import { api } from '@/lib/api';
+
+type PathOpportunity = {
+  path: string[];      // e.g. ['BTC','ETH','BNB','BTC']
+  pairs: string[];     // symbols used
+  start_amount: number;
+  end_amount: number;
+  profit_percent: number;
+  end_coin: string;
+  risk?: string;
+  // any other fields returned by backend
+};
+
+type ArbitrageScanResponse = {
+  opportunities: PathOpportunity[];
+  total_count?: number;
+  fetch_timestamp?: string;
+};
+
+const MAX_MISSES = 2; // only remove an opportunity after it misses N scans
 
 export default function Home() {
   const [results, setResults] = useState<ArbitrageScanResponse | null>(null);
@@ -12,17 +31,86 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
+  // Track opportunities by stable id -> {opportunity, misses}
+  // id chosen as path.join('-') which matches how you identify a cycle
+  const opsRef = useRef<Record<string, { op: PathOpportunity; misses: number }>>({});
+
+  const makeId = (op: PathOpportunity) => op.path.join('-');
+
+  const applyNewData = (data: ArbitrageScanResponse | null) => {
+    const existing = opsRef.current;
+    const next: typeof existing = {};
+
+    if (!data || !Array.isArray(data.opportunities)) {
+      // No data returned: increment misses for all, remove those with too many misses
+      Object.entries(existing).forEach(([id, slot]) => {
+        const misses = (slot.misses ?? 0) + 1;
+        if (misses < MAX_MISSES) {
+          next[id] = { op: slot.op, misses };
+        }
+        // otherwise drop it (it has missed too many times)
+      });
+    } else {
+      // Build map of incoming opportunities
+      const incomingMap = new Map<string, PathOpportunity>();
+      data.opportunities.forEach((op) => {
+        incomingMap.set(makeId(op), op);
+      });
+
+      // For every incoming op: either update existing or add new (misses = 0)
+      incomingMap.forEach((incomingOp, id) => {
+        const prev = existing[id];
+        if (prev) {
+          // update fields while preserving object identity when possible
+          // create a merged object to pass to UI (keeps consistent shape)
+          const merged = {
+            ...prev.op,
+            ...incomingOp,
+          };
+          next[id] = { op: merged, misses: 0 };
+        } else {
+          next[id] = { op: incomingOp, misses: 0 };
+        }
+      });
+
+      // For any existing that didn't appear in incoming, increment misses
+      Object.entries(existing).forEach(([id, slot]) => {
+        if (!next[id]) {
+          const misses = (slot.misses ?? 0) + 1;
+          if (misses < MAX_MISSES) {
+            next[id] = { op: slot.op, misses };
+          }
+        }
+      });
+    }
+
+    // Replace ref
+    opsRef.current = next;
+
+    // Turn into array to render, sorting by profit_percent desc (keeps stable order)
+    const arr = Object.values(next).map((s) => s.op);
+    arr.sort((a, b) => (b.profit_percent ?? 0) - (a.profit_percent ?? 0));
+
+    setResults({
+      opportunities: arr,
+      total_count: arr.length,
+      fetch_timestamp: data?.fetch_timestamp ?? new Date().toISOString(),
+    });
+  };
+
   const fetchArbitrage = async () => {
     setLoading(true);
     setError(null);
 
     try {
       const data = await api.scanAllArbitrage(1000);
-      setResults(data);
+      applyNewData(data);
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to scan opportunities');
       console.error('Arbitrage scan error:', err);
+      // On error, do not wipe results — instead increment misses to let stale items persist briefly
+      applyNewData(null);
     } finally {
       setLoading(false);
     }
@@ -31,7 +119,7 @@ export default function Home() {
   // Auto-refresh every 10 seconds
   useEffect(() => {
     fetchArbitrage(); // Initial fetch
-    
+
     const interval = setInterval(() => {
       fetchArbitrage();
     }, 10000); // 10 seconds

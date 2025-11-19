@@ -2,41 +2,25 @@
 
 import { useState } from 'react';
 import { ArbitrageForm } from '@/components/arbitrage-form';
-import { ArbitrageResults, ArbitrageCalculateResponse } from '@/components/arbitrage-results';
+import { ArbitrageResults } from '@/components/arbitrage-results';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
-import { api, ArbitrageCalculateRequest } from '@/lib/api'; // Ensure path is correct
+import { api, ArbitrageCalculateRequest, ArbitrageCalculateResponse } from '@/lib/api';
 
 export default function Home() {
   const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [startAmount, setStartAmount] = useState<number>(0);
 
   const handleCalculate = async (formData: ArbitrageCalculateRequest) => {
     setLoading(true);
     setError(null);
-    setResults({
-      start_coin: formData.start_coin,
-      start_amount: formData.start_amount,
-      mode: formData.mode,
-      opportunities: [],
-      total_count: 0,
-      fetch_timestamp: new Date().toISOString(),
-    });
-    setStartAmount(formData.start_amount);
 
     try {
-      // Use centralized API helper that handles streaming internally
       const data = await api.calculateArbitrage(formData);
-
-      setResults({
-        ...data,
-        total_count: data.opportunities.length,
-        fetch_timestamp: new Date().toISOString(),
-      });
-    } catch (err: any) {
-      setError(err.message || 'Failed to calculate arbitrage opportunities.');
+      setResults(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to calculate opportunities');
       console.error('Arbitrage calculation error:', err);
     } finally {
       setLoading(false);
@@ -77,10 +61,10 @@ export default function Home() {
                 {loading
                   ? 'Calculating arbitrage opportunities...'
                   : error
-                  ? 'Error occurred'
-                  : results
-                  ? `Found ${results.opportunities.length} opportunity(ies)`
-                  : 'Submit the form to see results'}
+                    ? 'Error occurred'
+                    : results
+                      ? `Found ${results.opportunities.length} opportunity(ies)`
+                      : 'Submit the form to see results'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -88,7 +72,6 @@ export default function Home() {
                 results={results}
                 loading={loading}
                 error={error}
-                startAmount={startAmount}
               />
             </CardContent>
           </Card>

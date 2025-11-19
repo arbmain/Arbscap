@@ -1,84 +1,99 @@
-const handleCalculate = async (formData: ArbitrageCalculateRequest) => {
-  setLoading(true);
-  setError(null);
-  setResults({
-    start_coin: formData.start_coin,
-    start_amount: formData.start_amount,
-    mode: formData.mode,
-    opportunities: [],
-    total_count: 0,
-    fetch_timestamp: new Date().toISOString(),
-  });
-  setStartAmount(formData.start_amount);
+'use client';
 
-  try {
-    const response = await fetch(`${api.BACKEND_URL}/arbitrage/calculate/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+import { useState } from 'react';
+import { ArbitrageForm } from '@/components/arbitrage-form';
+import { ArbitrageResults, ArbitrageCalculateResponse } from '@/components/arbitrage-results';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp } from 'lucide-react';
+import { api, ArbitrageCalculateRequest } from '@/lib/api'; // Ensure path is correct
+
+export default function Home() {
+  const [results, setResults] = useState<ArbitrageCalculateResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [startAmount, setStartAmount] = useState<number>(0);
+
+  const handleCalculate = async (formData: ArbitrageCalculateRequest) => {
+    setLoading(true);
+    setError(null);
+    setResults({
+      start_coin: formData.start_coin,
+      start_amount: formData.start_amount,
+      mode: formData.mode,
+      opportunities: [],
+      total_count: 0,
+      fetch_timestamp: new Date().toISOString(),
     });
+    setStartAmount(formData.start_amount);
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Backend error: ${response.status} - ${errText}`);
+    try {
+      // Use centralized API helper that handles streaming internally
+      const data = await api.calculateArbitrage(formData);
+
+      setResults({
+        ...data,
+        total_count: data.opportunities.length,
+        fetch_timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to calculate arbitrage opportunities.');
+      console.error('Arbitrage calculation error:', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-background to-muted p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <TrendingUp className="w-8 h-8 text-primary" />
+            <h1 className="text-4xl font-bold text-foreground">Crypto Arbitrage Finder</h1>
+          </div>
+          <p className="text-muted-foreground text-lg">
+            Discover profitable trading paths on Bybit spot markets
+          </p>
+        </div>
 
-    const decoder = new TextDecoder();
-    let buffer = '';
-    const opportunities: ArbitrageOpportunity[] = [];
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Section */}
+          <Card className="lg:col-span-1 h-fit">
+            <CardHeader>
+              <CardTitle>Calculate Opportunities</CardTitle>
+              <CardDescription>Enter your trading parameters</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ArbitrageForm onCalculate={handleCalculate} loading={loading} />
+            </CardContent>
+          </Card>
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      // Try to parse complete JSON objects from the buffer
-      let boundary = buffer.lastIndexOf('},');
-      if (boundary !== -1) {
-        const chunk = buffer.slice(0, boundary + 1); // include closing }
-        buffer = buffer.slice(boundary + 2); // remaining buffer
-
-        const items = chunk
-          .replace(/^\[|]$/g, '') // remove leading/trailing brackets
-          .split('},')
-          .map(s => s.endsWith('}') ? s : s + '}');
-
-        for (const item of items) {
-          try {
-            const parsed = JSON.parse(item);
-            opportunities.push(parsed);
-            setResults(prev => prev
-              ? { ...prev, opportunities: [...opportunities], total_count: opportunities.length }
-              : null
-            );
-          } catch (e) {
-            // ignore partial JSON
-          }
-        }
-      }
-    }
-
-    // Final parse for remaining buffer
-    if (buffer.trim()) {
-      try {
-        const finalParsed = JSON.parse(buffer);
-        if (finalParsed.opportunities) {
-          opportunities.push(...finalParsed.opportunities);
-          setResults(prev => prev
-            ? { ...prev, opportunities, total_count: opportunities.length }
-            : null
-          );
-        }
-      } catch {}
-    }
-
-  } catch (err: any) {
-    setError(err.message || 'Failed to calculate arbitrage opportunities.');
-    console.error('Arbitrage calculation error:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+          {/* Results Section */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Results</CardTitle>
+              <CardDescription>
+                {loading
+                  ? 'Calculating arbitrage opportunities...'
+                  : error
+                  ? 'Error occurred'
+                  : results
+                  ? `Found ${results.opportunities.length} opportunity(ies)`
+                  : 'Submit the form to see results'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ArbitrageResults
+                results={results}
+                loading={loading}
+                error={error}
+                startAmount={startAmount}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </main>
+  );
+}

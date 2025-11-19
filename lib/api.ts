@@ -49,9 +49,7 @@ export interface ArbitrageScanResponse {
   fetch_timestamp: string;
 }
 
-async function parseStreamedJSON(
-  response: Response
-): Promise<ArbitrageCalculateResponse | ArbitrageScanResponse> {
+async function parseStreamedJSON(response: Response): Promise<ArbitrageCalculateResponse | ArbitrageScanResponse> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('No response body to read');
 
@@ -67,12 +65,7 @@ async function parseStreamedJSON(
     }
   }
 
-  // --- FIX 1: prevent flicker by ensuring JSON fully completed ---
-  if (!resultStr.trim().endsWith('}')) {
-    throw new Error('Stream incomplete');
-  }
-  // --------------------------------------------------------------
-
+  // Backend streams a complete JSON object at the end
   try {
     return JSON.parse(resultStr);
   } catch (err) {
@@ -151,19 +144,13 @@ export const api = {
   /**
    * Auto-scan all circular arbitrage opportunities (no form input needed)
    */
-  scanAllArbitrage: async (
-    startAmount: number = 1000
-  ): Promise<ArbitrageScanResponse> => {
-    // --- FIX 2: increase stable limit ---
-    const response = await fetch(
-      `${BACKEND_URL}/arbitrage/scan/stream?start_amount=${startAmount}&limit=200`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+  scanAllArbitrage: async (startAmount: number = 1000): Promise<ArbitrageScanResponse> => {
+    const response = await fetch(`${BACKEND_URL}/arbitrage/scan/stream?start_amount=${startAmount}&limit=50`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
